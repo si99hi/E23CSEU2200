@@ -2,6 +2,7 @@ const axios = require('axios');
 const { solveKnapsack } = require('./solver');
 const { log } = require('../notification_app_be/src/utils/logWrapper');
 
+
 let authToken = null;
 
 function setToken(token) {
@@ -60,7 +61,7 @@ async function runVehicleScheduler(token) {
     authToken = token;
     console.log('runVehicleScheduler: start');
     log('backend', 'info', 'service', 'Starting scheduler');
-    
+
     try {
         console.log('runVehicleScheduler: fetching depots');
         const depots = await fetchDepots();
@@ -69,14 +70,14 @@ async function runVehicleScheduler(token) {
         console.log('runVehicleScheduler: fetching vehicles');
         const vehicles = await fetchVehicles();
         console.log('runVehicleScheduler: fetched vehicles', vehicles.length);
-        
+
         log('backend', 'info', 'service', 'Got ' + depots.length + ' depots and ' + vehicles.length + ' vehicles');
-        
+
         const results = [];
         for (let i = 0; i < depots.length; i++) {
             const depot = depots[i];
-const solution = await solveKnapsack(vehicles, depot.MechanicHours);
-            
+            const solution = await solveKnapsack(vehicles, depot.MechanicHours);
+
             results.push({
                 depotId: depot.ID,
                 budgetHours: depot.MechanicHours,
@@ -84,14 +85,14 @@ const solution = await solveKnapsack(vehicles, depot.MechanicHours);
                 hoursUsed: solution.totalHours,
                 vehiclesServiced: solution.selected.length
             });
-            
+
             log('backend', 'info', 'service', 'Depot ' + depot.ID + ': impact ' + solution.totalImpact);
             console.log('runVehicleScheduler: processed depot', depot.ID);
             await new Promise((resolve) => setImmediate(resolve));
         }
-        
+
         const totalImpact = results.reduce((sum, r) => sum + r.impact, 0);
-        
+
         return {
             success: true,
             summary: {
@@ -101,11 +102,11 @@ const solution = await solveKnapsack(vehicles, depot.MechanicHours);
             },
             depotResults: results
         };
-        
+
     } catch (error) {
         log('backend', 'error', 'service', error.message);
         return { success: false, error: error.message };
     }
 }
 
-module.exports = { runVehicleScheduler, setToken };
+module.exports = { runVehicleScheduler, setToken }; 

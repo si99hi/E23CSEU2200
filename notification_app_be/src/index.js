@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const { setupAuth } = require('./config/auth');
 const { log, requestLogger } = require('./utils/logWrapper');
 const { runVehicleScheduler } = require('../../vehicle_maintenance_scheduler');
+const inboxRoutes = require('./routes/inboxRoutes');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -17,8 +18,10 @@ app.use((req, res, next) => {
     console.log('[REQUEST]', req.method, req.url);
     next();
 });
-// requestLogger was causing /health requests to hang, disable until fixed
-// app.use(requestLogger);
+app.use((req, res, next) => {
+    req.authToken = globalAuthToken;
+    next();
+});
 
 const myCredentials = {
     "email": "e23cseu2200@bennett.edu.in",
@@ -35,7 +38,9 @@ app.get('/', (req, res) => {
         message: 'Server is running',
         endpoints: [
             'GET /health',
-            'GET /run-scheduler'
+            'GET /run-scheduler',
+            'GET /api/inbox?n=10',
+            'GET /api/inbox/stream?n=10'
         ]
     });
 });
@@ -60,6 +65,7 @@ app.get('/run-scheduler', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+app.use('/api/inbox', inboxRoutes);
 
 async function initializeAuth() {
     console.log('initializeAuth: start');
