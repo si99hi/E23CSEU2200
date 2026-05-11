@@ -10,13 +10,13 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(requestLogger);
 const myCredentials = {
-    email: 'your_email@bennett.edu.in',      
-    name: 'Your Full Name',                   
-    mobileNo: '9999999999',                   
-    githubUsername: 'your_github_username',   
-    rollNo: 'E23CSEUXXXX',                    
-    accessCode: 'TfDxgr'                      
-};
+    "email": "e23cseu2200@bennett.edu.in",
+    "name": "Siddhi",
+    "mobileNo": "9993330122",
+    "githubUsername": "si99hi",
+    "rollNo": "E23CSEU2200",
+    "accessCode": "TfDxgr"
+}
 
 app.get('/', (req, res) => {
     log('backend', 'info', 'route', 'Root endpoint accessed');
@@ -32,21 +32,26 @@ app.get('/health', (req, res) => {
     log('backend', 'debug', 'controller', 'Health check');
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-async function startServer() {
-    log('backend', 'info', 'config', 'Starting application');
-    
+async function initializeAuth() {
+    log('backend', 'info', 'config', 'Starting authentication flow');
+
     try {
         const authData = await setupAuth(myCredentials);
         log('backend', 'info', 'config', 'Authentication successful');
-        app.listen(PORT, () => {
-            log('backend', 'info', 'config', `Server running on port ${PORT}`);
-            console.log(`Server started on http://localhost:${PORT}`);
-        });
-        
+        return authData;
     } catch (error) {
-        log('backend', 'fatal', 'config', `Startup failed: ${error.message}`);
-        console.error('Failed to start:', error.message);
-        process.exit(1);
+        log('backend', 'warn', 'config', `Authentication not available: ${error.message}`);
+        console.warn('Authentication failed or not configured:', error.message);
+        return null;
     }
+}
+
+function startServer() {
+    app.listen(PORT, async () => {
+        log('backend', 'info', 'config', `Server running on port ${PORT}`);
+        console.log(`Server started on http://localhost:${PORT}`);
+
+        await initializeAuth();
+    });
 }
 startServer();

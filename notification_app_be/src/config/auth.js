@@ -1,72 +1,60 @@
 const axios = require('axios');
 const { log, setAuthToken, flushPendingLogs } = require('../utils/logWrapper');
 
-async function registerUser(userDetails) {
-    log('backend', 'info', 'auth', 'Starting registration process');
-    
-    try {
-        const response = await axios.post(
-            'http://4.224.186.213/evaluation-service/register',
-            {
-                email: userDetails.email,
-                name: userDetails.name,
-                mobileNo: userDetails.mobileNo,
-                githubUsername: userDetails.githubUsername,
-                rollNo: userDetails.rollNo,
-                accessCode: userDetails.accessCode
-            },
-            { timeout: 10000 }
-        );
-        
-        log('backend', 'info', 'auth', 'Registration successful');
-        return response.data;
-        
-    } catch (error) {
-        log('backend', 'error', 'auth', `Registration failed: ${error.message}`);
-        throw new Error(`Registration failed: ${error.message}`);
-    }
-}
-async function getAuthToken(email, name, rollNo) {
-    log('backend', 'debug', 'auth', 'Requesting auth token');
+async function getAuthTokenWithExistingCredentials(userDetails, clientID, clientSecret) {
+    log('backend', 'info', 'auth', 'Using existing credentials to get auth token');
     
     try {
         const response = await axios.post(
             'http://4.224.186.213/evaluation-service/auth',
             {
-                email: email,
-                name: name,
-                rollNo: rollNo
+                email: userDetails.email,
+                name: userDetails.name,
+                rollNo: userDetails.rollNo,
+                accessCode: userDetails.accessCode,
+                clientID: clientID,
+                clientSecret: clientSecret
             },
             { timeout: 10000 }
         );
-        const token = response.data.token || response.data.accessToken;
         
-        log('backend', 'info', 'auth', 'Auth token obtained');
+        const token = response.data.token || response.data.accessToken;
+        log('backend', 'info', 'auth', 'Auth token obtained successfully');
         return token;
         
     } catch (error) {
         log('backend', 'error', 'auth', `Auth failed: ${error.message}`);
-        throw new Error(`Authentication failed: ${error.message}`);
+        if (error.response) {
+            log('backend', 'error', 'auth', `Response: ${JSON.stringify(error.response.data)}`);
+        }
+        throw error;
     }
 }
+
 async function setupAuth(userDetails) {
-    log('backend', 'info', 'auth', 'Setting up authentication');
+    log('backend', 'info', 'auth', 'Starting authentication flow');
     
-    const registrationData = await registerUser(userDetails);
+    const clientID = process.env.CLIENT_ID;
+    const clientSecret = process.env.CLIENT_SECRET;
     
-    const token = await getAuthToken(
-        userDetails.email,
-        userDetails.name,
-        userDetails.rollNo
+    if (!clientID || !clientSecret) {
+        log('backend', 'error', 'auth', 'Missing CLIENT_ID or CLIENT_SECRET in .env');
+        throw new Error('Please add CLIENT_ID and CLIENT_SECRET to .env file');
+    }
+    const token = await getAuthTokenWithExistingCredentials(
+        userDetails,
+        clientID,
+        clientSecret
     );
+    
     setAuthToken(token);
     await flushPendingLogs();
     
-    log('backend', 'info', 'auth', 'Authentication complete and logging configured');
+    log('backend', 'info', 'auth', 'Authentication complete');
     
     return {
-        clientId: registrationData.clientID,
-        clientSecret: registrationData.clientSecret,
+        clientID: clientID,
+        clientSecret: clientSecret,
         authToken: token
     };
 }
